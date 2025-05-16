@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Map</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        #map { height: 600px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
+    <script>
+        var map = L.map('map').setView([10.8505, 76.2711], 8); // Initialize map centered around Kerala
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Socket.IO connection to the server
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        // Function to update the map with a red marker at the specified location
+        function updateMap(latitude, longitude) {
+            // Update map view to the new latitude and longitude
+            map.setView([latitude, longitude], 18);
+
+            // Remove any previous markers
+            map.eachLayer(function(layer) {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            // Add a marker at the new latitude and longitude with a red icon and popup
+            var redIcon = L.icon({
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x-red.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                tooltipAnchor: [16, -28],
+                shadowSize: [41, 41]
+            });
+
+            var marker = L.marker([latitude, longitude], {icon: redIcon}).addTo(map);
+            marker.bindPopup('<span style="color: red;"><i class="fa fa-map-marker" style="font-size:20px;color:red"></i>Locating</span>').openPopup();
+        }
+
+        // Event listener to handle updates from the server
+        socket.on('update_location', function(data) {
+            var latitude = parseFloat(data.latitude);
+            var longitude = parseFloat(data.longitude);
+            updateMap(latitude, longitude);
+        });
+
+        // Display the marker based on the initial latitude and longitude values
+        var initialLatitude = parseFloat('{{ location_data.latitude }}');
+        var initialLongitude = parseFloat('{{ location_data.longitude }}');
+        updateMap(initialLatitude, initialLongitude);
+    </script>
+</body>
+</html>
